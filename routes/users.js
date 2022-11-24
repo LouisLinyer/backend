@@ -2,8 +2,10 @@ var express = require('express');
 var router = express.Router();
 
 require('../models/connection');
-const User = require('../models/user');
+const User = require('../models/users');
 const { checkBody } = require('../modules/checkBody');
+const uid2 = require('uid2');
+const bcrypt = require('bcrypt');
 
 router.post('/signup', (req, res) => {
 	if (!checkBody(req.body, ['firstname','username', 'password'])) {
@@ -11,18 +13,24 @@ router.post('/signup', (req, res) => {
     return;
   }
 
-  User.findOne({ username: req.body.username }).then(data => {
+// Vérifie si l'utilisateur n'a pas déjà été créé
+  User.findOne({ firstname: req.body.username, username: req.body.username }).then(data => {
     if (data === null) {
+      const hash = bcrypt.hashSync(req.body.password, 10);
+
       const newUser = new User({
         firstname: req.body.firstname,
         username: req.body.username,
-        password: req.body.password,
+        password: hash,
+        token: uid2(32),
+        deleteTweet: true,
       });
 
-      newUser.save().then(() => {
-        res.json({ result: true });
+      newUser.save().then(newDoc => {
+        res.json({ result: true, token: newDoc.token });
       });
     } else {
+      // l'utilisateur existe déjà dans la base de donnée
       res.json({ result: false, error: 'Utilisateur existe deja' });
     }
   });
@@ -34,9 +42,9 @@ router.post('/signin', (req, res) => {
     return;
   }
 
-  User.findOne({firstname: req.body.firstname, username: req.body.username, password: req.body.password }).then(data => {
-    if (data) {
-      res.json({ result: true });
+  User.findOne({firstname: req.body.firstname, username: req.body.username}).then(data => {
+    if (data && bcrypt.compareSync(req.body.password, data.password)) {
+      res.json({ result: true, token: data.token });
     } else {
       res.json({ result: false, error: 'Utilisateur non trouvé' });
     }
