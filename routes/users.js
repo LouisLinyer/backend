@@ -1,58 +1,44 @@
 var express = require('express');
 var router = express.Router();
-const uid2 = require('uid2');
-const bcrypt = require('bcrypt');
-
 
 require('../models/connection');
-const User = require('../models/user');
+const User = require('../models/users');
 const { checkBody } = require('../modules/checkBody');
 
-
 router.post('/signup', (req, res) => {
-  const token = uid2(32);
-  const hash = bcrypt.hashSync(req.body.password, 10);
-
-	if (!checkBody(req.body, ['firsName', 'username', 'password'])) {
+	if (!checkBody(req.body, ['firstname','username', 'password'])) {
     res.json({ result: false, error: 'Missing or empty fields' });
     return;
   }
 
-  // Check if the user has not already been registered
   User.findOne({ username: req.body.username }).then(data => {
     if (data === null) {
-      const hash = bcrypt.hashSync(req.body.password, 10);
-
       const newUser = new User({
-        firsName: req.body.firsName,
+        firstname: req.body.firstname,
         username: req.body.username,
-        password: hash,
-        token: uid2(32),
-        deleteTweet: true,
+        password: req.body.password,
       });
 
-      newUser.save().then(newDoc => {
-        res.json({ result: true, token: newDoc.token });
+      newUser.save().then(() => {
+        res.json({ result: true });
       });
     } else {
-      // User already exists in database
-      res.json({ result: false, error: 'User already exists' });
+      res.json({ result: false, error: 'Utilisateur existe deja' });
     }
   });
 });
 
 router.post('/signin', (req, res) => {
-  
-  if (!checkBody(req.body, ['username', 'password'])) {
-    res.json({ result: false, error: 'Missing or empty fields' });
+  if (!checkBody(req.body, ['firstname','username', 'password'])) {
+    res.json({ result: false, error: 'Champ vide ou manquant' });
     return;
   }
 
-  User.findOne({ username: req.body.username }).then(data => {
-    if (data && bcrypt.compareSync(req.body.password, data.password)) {
-      res.json({ result: true, token: data.token });
+  User.findOne({firstname: req.body.firstname, username: req.body.username, password: req.body.password }).then(data => {
+    if (data) {
+      res.json({ result: true });
     } else {
-      res.json({ result: false, error: 'User not found or wrong password' });
+      res.json({ result: false, error: 'Utilisateur non trouvé' });
     }
   });
 });
