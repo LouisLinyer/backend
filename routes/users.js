@@ -14,8 +14,9 @@ router.post('/signup', (req, res) => {
   }
 
 // Vérifie si l'utilisateur n'a pas déjà été créé
-  User.findOne({ firstname: req.body.username, username: req.body.username }).then(data => {
-    if (data === null) {
+  User.findOne({ firstname: req.body.firstname, username: req.body.username }).then(data => {
+    if (data.username === null) {
+      console.log(data);
       const hash = bcrypt.hashSync(req.body.password, 10);
 
       const newUser = new User({
